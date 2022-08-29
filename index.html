@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+</head>
+<body>
+    <div class="container">
+        <video class="input_video" style="display: none;"></video>
+        <canvas class="output_canvas" width="600px" height="450px"></canvas>
+      </div>
+      <script type="module">
+        const videoElement = document.getElementsByClassName('input_video')[0];
+        const canvasElement = document.getElementsByClassName('output_canvas')[0];
+        const canvasCtx = canvasElement.getContext('2d');
+        //336,285,296,295,334,282,293,283,300,276
+        //107,55,66,65,105,52,63,53,70,46
+        const PONTOS_SOBRANCELHA_ESQUERDA=[296,295,334,282];
+        const PONTOS_SOBRANCELHA_DIREITA=[66,65,105,52];
+        const PONTOS_CANTO_OLHO_DIREITO=[130];
+        const PONTOS_CANTO_OLHO_ESQUERDO=[359];
+        const PONTOS_NARIZ=[4,102,331];
+        const PONTOS_BOCA=[0,17,61,291];
+        const PONTOS_INFRAORBITAL_ESQUERDO=[348];
+        const PONTOS_INFRAORBITAL_DIREITO=[119];
+        let SOEx=0;
+        let SOEy=0;
+        let SODx=0;
+        let SODy=0;
+        let distancia_sobrancelha_esquerda=0;
+        var calibrou= false;
+        
+        
+        let dist_euc_sobra_esquerda=0;
+
+        let dist_sobrancelha_esquerda_MENOR=10000;
+        let dist_sobrancelha_esquerda_MAIOR=0;
+
+        let dist_euc_centro_nariz=0;
+        
+        function onResults(results) {
+          
+          canvasCtx.save();
+          canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+          canvasCtx.drawImage(
+              results.image, 0, 0, canvasElement.width, canvasElement.height);
+          if (results.multiFaceLandmarks) {
+            canvasCtx.strokeStyle='red';
+            canvasCtx.fillStyle='red';
+            for (const landmarks of results.multiFaceLandmarks) {
+              PONTOS_SOBRANCELHA_ESQUERDA.forEach(LEFT_EYEBROW => {
+                SOEx=((landmarks[PONTOS_SOBRANCELHA_ESQUERDA[0]].x * canvasElement.width)+(landmarks[PONTOS_SOBRANCELHA_ESQUERDA[2]].x * canvasElement.width))/2;
+                SOEy=((landmarks[PONTOS_SOBRANCELHA_ESQUERDA[0]].y * canvasElement.height)+(landmarks[PONTOS_SOBRANCELHA_ESQUERDA[1]].y * canvasElement.height))/2;
+                canvasCtx.beginPath();
+                //canvasCtx.fillText(''+LEFT_EYEBROW,landmarks[LEFT_EYEBROW].x*600,landmarks[LEFT_EYEBROW].y*450);
+                canvasCtx.arc(SOEx, SOEy, 1, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+              PONTOS_SOBRANCELHA_DIREITA.forEach(RIGHT_EYEBROW => {
+                SODx=(landmarks[PONTOS_SOBRANCELHA_DIREITA[2]].x+landmarks[PONTOS_SOBRANCELHA_DIREITA[0]].x)/2;
+                SODy=(landmarks[PONTOS_SOBRANCELHA_DIREITA[2]].y+landmarks[PONTOS_SOBRANCELHA_DIREITA[1]].y)/2;
+                canvasCtx.beginPath();
+                //canvasCtx.fillText(''+RIGHT_EYEBROW,landmarks[RIGHT_EYEBROW].x*600,landmarks[RIGHT_EYEBROW].y*450);
+                canvasCtx.arc(SODx*canvasElement.width,SODy*canvasElement.height, 1, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+              PONTOS_INFRAORBITAL_ESQUERDO.forEach(INFRAORBITAL_ESQUERDO => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(landmarks[INFRAORBITAL_ESQUERDO].x*canvasElement.width,landmarks[INFRAORBITAL_ESQUERDO].y*canvasElement.height, 2, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+              PONTOS_INFRAORBITAL_DIREITO.forEach(INFRAORBITAL_DIREITO => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(landmarks[INFRAORBITAL_DIREITO].x*canvasElement.width,landmarks[INFRAORBITAL_DIREITO].y*canvasElement.height, 2, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+            canvasCtx.strokeStyle='yellow';
+            canvasCtx.fillStyle='yellow';
+
+              PONTOS_CANTO_OLHO_DIREITO.forEach(CANTO_OLHO_DIREITO => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(landmarks[CANTO_OLHO_DIREITO].x*canvasElement.width,landmarks[CANTO_OLHO_DIREITO].y*canvasElement.height, 2, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+           
+
+              PONTOS_CANTO_OLHO_ESQUERDO.forEach(CANTO_OLHO_ESQUERDO => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(landmarks[CANTO_OLHO_ESQUERDO].x*600,landmarks[CANTO_OLHO_ESQUERDO].y*450, 2, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+            canvasCtx.strokeStyle='orange';
+            canvasCtx.fillStyle='orange';
+
+              PONTOS_NARIZ.forEach(NARIZ => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(landmarks[NARIZ].x*600,landmarks[NARIZ].y*450, 2, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+            canvasCtx.strokeStyle='blue';
+            canvasCtx.fillStyle='blue';
+
+              PONTOS_BOCA.forEach(BOCA => {
+                canvasCtx.beginPath();
+                canvasCtx.arc(landmarks[BOCA].x*600,landmarks[BOCA].y*450, 2, 0, 2*Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.fill();
+              });
+            
+
+              distancia_sobrancelha_esquerda=(landmarks[PONTOS_INFRAORBITAL_ESQUERDO[0]].y * canvasElement.height)-SOEy;
+              //console.log('Distancia: '+distancia_sobrancelha_esquerda); 
+
+              dist_euc_sobra_esquerda= Math.sqrt(
+                Math.pow(((landmarks[PONTOS_NARIZ[1]].x * canvasElement.width)
+                - SOEx),2) + Math.pow(((landmarks[PONTOS_NARIZ[1]].y * canvasElement.height)
+                - SOEy),2)
+                );
+
+               /* dist_euc_centro_nariz= Math.sqrt(
+                Math.pow(((landmarks[PONTOS_NARIZ[1]].x * canvasElement.width)
+                - (landmarks[PONTOS_NARIZ[2]].x * canvasElement.width)
+                ),2) + Math.pow(((landmarks[PONTOS_NARIZ[1]].y * canvasElement.height)
+                - (landmarks[PONTOS_NARIZ[2]].y * canvasElement.height)),2)
+                );
+                */
+
+             // console.log('valor: ',Math.pow(((landmarks[PONTOS_NARIZ[1]].x * canvasElement.width)
+             //   - SOEx),2));
+              //console.log(dist_euc_sobra_esquerda);
+              
+              if(!calibrou){
+                  calibrou= true;
+
+                  dist_euc_centro_nariz=Math.sqrt(
+                Math.pow(((landmarks[PONTOS_NARIZ[1]].x * canvasElement.width)
+                - (landmarks[PONTOS_NARIZ[2]].x * canvasElement.width)
+                ),2) + Math.pow(((landmarks[PONTOS_NARIZ[1]].y * canvasElement.height)
+                - (landmarks[PONTOS_NARIZ[2]].y * canvasElement.height)),2)
+                );
+
+              }
+              const limiar_minimo=(dist_euc_centro_nariz-dist_euc_centro_nariz*0.05).toFixed(2);
+              const limiar_maximo=(dist_euc_centro_nariz+dist_euc_centro_nariz*0.05).toFixed(2);
+              var dist_real=Math.sqrt(
+                Math.pow(((landmarks[PONTOS_NARIZ[1]].x * canvasElement.width)
+                - (landmarks[PONTOS_NARIZ[2]].x * canvasElement.width)
+                ),2) + Math.pow(((landmarks[PONTOS_NARIZ[1]].y * canvasElement.height)
+                - (landmarks[PONTOS_NARIZ[2]].y * canvasElement.height)),2)
+                );
+              console.log('limiar minimo: ',limiar_minimo);
+              console.log('limiar máximo: ',limiar_maximo);
+
+              if(dist_real>limiar_minimo && dist_real<limiar_maximo){
+                console.log('Entrou na posição!');
+              }else{
+                console.log('Saiu da posição!');
+              }
+
+
+
+              console.log('Distacia base: ',dist_euc_centro_nariz);
+              
+              console.log('Distancia Real: ',dist_real);
+
+              if(dist_sobrancelha_esquerda_MENOR>dist_euc_sobra_esquerda){
+                dist_sobrancelha_esquerda_MENOR=dist_euc_sobra_esquerda;
+              }
+
+
+              if(dist_sobrancelha_esquerda_MAIOR<dist_euc_sobra_esquerda){
+                dist_sobrancelha_esquerda_MAIOR=dist_euc_sobra_esquerda;
+              }
+
+              //console.log('Menor: ', dist_sobrancelha_esquerda_MENOR, 'Maior: ', dist_sobrancelha_esquerda_MAIOR);
+
+              var locomocao= dist_euc_sobra_esquerda - dist_sobrancelha_esquerda_MENOR;
+              var locomocao_etapa= (dist_sobrancelha_esquerda_MAIOR - dist_sobrancelha_esquerda_MENOR) / 5;
+              var locomocao_total= locomocao/locomocao_etapa;
+              
+              /*if(locomocao>0){
+                if(locomocao_total>1){
+                  console.log('ANDOU!');
+                }
+                console.log('Valor: ', locomocao_total);
+              }
+              */
+
+              
+            
+
+          }
+
+        } 
+          
+          canvasCtx.restore();
+        }
+        
+        const faceMesh = new FaceMesh({locateFile: (file) => {
+          return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        }});
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        faceMesh.onResults(onResults);
+        
+        const camera = new Camera(videoElement, {
+          onFrame: async () => {
+            await faceMesh.send({image: videoElement});
+          },
+          width: 600,
+          height: 450
+        });
+        camera.start();
+        </script>
+</body>
+</html>
